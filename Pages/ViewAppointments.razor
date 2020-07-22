@@ -1,0 +1,199 @@
+﻿@page "/ViewAppointments"
+@using MedicalRecordSystem.Data
+@using MedicalRecordSystem.Services
+
+@inherits OwningComponentBase<AppointmentService>
+
+<AuthorizeView Roles="Admin">
+    <Authorized Context="Auth">
+
+        @if (appointments == null)
+        {
+            <p><em>Loading...</em></p>
+        }
+        else
+        {
+            <div class="container border p-3">
+                <div class="row">
+                    <div class="col-8">
+                        <h3 class="text-info">Appointment List</h3>
+                    </div>
+                    <div class="col-6">
+                    </div>
+                </div>
+                <div class="row pt-5">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th> User Name</th>
+                                <th>Appointment Reason</th>
+
+
+                                <th>Phone</th>
+
+                                <th>Date</th>
+                                <th>Confirmed</th>
+
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var appointment in appointments)
+                            {
+                            <tr>
+                                <td>@appointment.UserName</td>
+                                <td>@appointment.Reason</td>
+                                <td>@appointment.PhoneNumber</td>
+
+
+                                <td>@appointment.AppointmentDate.ToShortDateString()</td>
+
+
+                                <td><input type="checkbox" checked="@(appointment.IsConfirmed)" class="form-control" disabled></td>
+                                <td>
+                                    <button class="btn btn-primary" style="width:150px;"
+                                            @onclick="(() => EditAppointment(appointment))">
+                                        Edit
+                                    </button>
+
+                                </td>
+
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+        @if (ShowPopup)
+        {
+            <div class="modal" tabindex="-1" style="display:block" role="dialog">
+                <EditForm Model="@objAppointment" OnValidSubmit="@ValidSubmit">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h3 class="text-info">Edit Appointment</h3>
+
+                                <button type="button" class="close"
+                                        @onclick="ClosePopup">
+                                    <span aria-hidden="true">X</span>
+                                </button>
+                            </div>
+                            <!-- Edit form for the current forecast -->
+                            <div class="modal-body">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary />
+                                <div class="row">
+                                    <div class="col-9">
+
+                                        <div class="row py-2">
+                                            <div class="col-4">
+                                                Appointment Reason
+                                            </div>
+                                            <div class="col-8">
+                                                <input class="form-control" type="text" @bind="objAppointment.Reason" />
+                                            </div>
+                                        </div>
+
+
+
+                                        <div class="row py-2">
+                                            <div class="col-4">
+                                                Phone
+                                            </div>
+                                            <div class="col-8">
+                                                <input class="form-control" type="text" @bind="objAppointment.PhoneNumber" />
+                                            </div>
+                                        </div>
+
+
+                                        <div class="row py-2">
+                                            <div class="col-4">
+                                                Date
+                                            </div>
+                                            <div class="col-8">
+                                                <input class="form-control" type="text" value="@objAppointment.AppointmentDate.ToShortDateString()" />
+                                            </div>
+                                        </div>
+
+                                        <div class="row py-2">
+                                            <div class=" offset-4 col">
+                                                <button class="btn btn-success form-control" type="submit">Confirm!</button>
+                                            </div>
+                                            <div class="col">
+                                                <button class="btn btn-danger form-control" @onclick="DeleteAppointment">
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+
+
+        }
+    </Authorized>
+    <NotAuthorized>
+        <p>You are not signed in</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+
+    // AuthenticationState is available as a CascadingParameter
+    List<Appointment> appointments;
+    Appointment objAppointment = new Appointment();
+
+    public byte[] ImageUploaded { get; set; }
+    
+
+    protected override void OnInitialized()
+    {
+        
+
+        appointments = Service.GetAppointments();
+
+    }
+
+
+
+    bool ShowPopup = false;
+    void ClosePopup()
+    {
+        // Close the Popup
+        ShowPopup = false;
+    }
+
+    void EditAppointment(Appointment appointment)
+    {
+        objAppointment = appointment;
+        appointments = Service.GetAppointments();
+        ShowPopup = true;
+    }
+
+    void DeleteAppointment()
+    {
+        ShowPopup = false;
+        var result = @Service.DeleteAppointment(objAppointment);
+        appointments.Clear();
+        appointments = @Service.GetAppointments();
+    }
+
+    void ValidSubmit()
+    {
+        var result = false;
+        ShowPopup = false;
+        result = Service.ConfirmAppointment(objAppointment);
+        appointments = Service.GetAppointments();
+    }
+    
+
+
+}
+
+

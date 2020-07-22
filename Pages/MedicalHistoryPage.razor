@@ -1,0 +1,251 @@
+﻿@page "/MedicalHistory"
+@using MedicalRecordSystem.Data;
+@using MedicalRecordSystem.Services;
+@using Microsoft.AspNetCore.Http
+@inherits OwningComponentBase<MedicalHistoryService>
+@inject IHttpContextAccessor httpContextAccessor
+<AuthorizeView Roles="Admin,Normal">
+	<Authorized Context="Auth">
+		@if (medicalHistories == null)
+		{
+			<p><em> No History to display</em></p>
+		}
+		else
+		{
+			<div class="container border p-3">
+				<div class="row">
+					<div class="col-4">
+						<h3 class="text-info">Medical History</h3>
+					</div>
+					<div class="col-8">
+						<button class="btn btn-info form-control" @onclick="AddNewMedicalHistory">
+							Add New Record
+						</button>
+					</div>
+				</div>
+				<div class="row pt-8">
+					<table class="table table-striped">
+						<thead>
+							<tr>
+								<th> Name </th>
+								<th> Age </th>
+								<th> Gender </th>
+								<th>Blood Group</th>
+								<th>Allergies</th>
+								<th>Medical Condition</th>
+								<th>Medication</th>
+								<th>Email</th>
+
+							</tr>
+						</thead>
+						<tbody>
+							@foreach (var obj in medicalHistories)
+							{
+								<tr>
+									<td>@obj.Name</td>
+									<td>@obj.Age</td>
+									<td>@obj.Gender</td>
+									<td>@obj.BloodGroup</td>
+									<td>@obj.Allergies</td>
+									<td>@obj.MedicalCondition</td>
+									<td>@obj.Medication</td>
+									<td>@obj.UserEmail</td>
+									<td>
+										<button class="btn btn-primary" style="width:150px" @onclick="(()=> EditMedicalHistory(obj))">
+											Edit
+										</button>
+									</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		}
+		@if (ShowPopup)
+		{
+			<div class="modal" tabindex="-1" style="display:block" role="dialog">
+				<EditForm Model="objMedicalHistory" OnValidSubmit="@ValidSubmit">
+					<div class="modal-dialog">
+						<div class="modal-content">
+							<div class="modal-header">
+								<h3 class="text-info">@(objMedicalHistory.U_Id!=0 ? "Update" : "Create") Medical History</h3>
+								<button type="button" class="close" @onclick="ClosePopup">
+									<span aria-hidden="true">X</span>
+								</button>
+							</div>
+							<div class="modal-body">
+								<DataAnnotationsValidator/>
+					
+								<div class="row">
+									<div class="col-9">
+										<div class="row py-2">
+											<div class="col-4">
+												Name
+											</div>
+											<div class="col-8">
+												<input class="form-control" type="text" @bind="objMedicalHistory.Name" />
+												<ValidationMessage For="(()=> objMedicalHistory.Name)"></ValidationMessage>
+											</div>
+										</div>
+										<div class="row py-2">
+											<div class="col-4">
+												Age
+											</div>
+                                            <div class="col-8">
+                                                <input class="form-control" type="text" @bind="objMedicalHistory.Age" />
+                                                <ValidationMessage For="(()=> objMedicalHistory.Age)"></ValidationMessage>
+                                            </div>
+										</div>
+										<div class="row py-2">
+											<div class="col-4">
+												Gender
+											</div>
+                                            <div class="col-8">
+                                                
+                                                    
+                                                    <select class="form-control" @bind="objMedicalHistory.Gender">
+                                                        <option>Male</option>
+                                                        <option>Female</option>
+                                                        
+                                                    </select>
+                                                    
+                                                    <ValidationMessage For="(()=> objMedicalHistory.Gender)"></ValidationMessage>
+                                                
+                                                
+                                            </div>
+										</div>
+										<div class="row py-2">
+											<div class="col-4">
+												Blood Group
+											</div>
+											<div class="col-8">
+												<input class="form-control" type="text" @bind="objMedicalHistory.BloodGroup" />
+											</div>
+										</div>
+										<div class="row py-2">
+											<div class="col-4">
+												Allergies
+											</div>
+											<div class="col-8">
+												<input class="form-control" type="text" @bind="objMedicalHistory.Allergies" />
+											</div>
+										</div>
+										<div class="row py-2">
+											<div class="col-4">
+												Medical Condition
+											</div>
+                                            <div class="col-8">
+                                                <input class="form-control" type="text" @bind="objMedicalHistory.MedicalCondition" />
+                                                <ValidationMessage For="(()=> objMedicalHistory.MedicalCondition)"></ValidationMessage>
+                                            </div>
+										</div>
+										<div class="row py-2">
+											<div class="col-4">
+												Medication
+											</div>
+                                            <div class="col-8">
+                                                <input class="form-control" type="text" @bind="objMedicalHistory.Medication" />
+                                                <ValidationMessage For="(()=> objMedicalHistory.Medication)"></ValidationMessage>
+                                            </div>
+										</div>
+										<div class="row py-2">
+
+											<div class="offset-4 col">
+												<button class="btn btn-primary form-control" type="submit">Submit</button>
+											</div>
+											@if (objMedicalHistory.U_Id > 0)
+											{
+
+												<div class="col">
+													<button class="btn btn-danger form-control"
+															@onclick="DeleteMedicalHistory"
+															type="submit">
+														Delete
+													</button>
+												</div>
+											}
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</EditForm>
+			</div>
+		}
+	</Authorized>
+	<NotAuthorized>
+		<p>You are not signed in</p>
+	</NotAuthorized>
+</AuthorizeView>
+
+@code {
+
+    List<MedicalHistory> medicalHistories;
+    MedicalHistory objMedicalHistory = new MedicalHistory();
+    bool ShowPopup = false;
+    string currentUserId = null;
+    string currentRole = null;
+    string currentUserEmail;
+    protected override void OnInitialized()
+    {
+        currentUserId = httpContextAccessor.HttpContext.User.Claims.FirstOrDefault(r => r.Type == System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        currentRole = httpContextAccessor.HttpContext.User.Claims.FirstOrDefault(r => r.Type == System.Security.Claims.ClaimTypes.Role)?.Value;
+
+        medicalHistories = Service.GetMedicalHistories(currentRole,currentUserId);
+        currentUserEmail = httpContextAccessor.HttpContext.User.Identity.Name;
+
+        objMedicalHistory.UserEmail = currentUserEmail;
+    }
+
+    void AddNewMedicalHistory()
+    {
+        if (objMedicalHistory.U_Id > 0)
+        {
+            ShowPopup = false;
+        }
+        else
+        {
+            objMedicalHistory.U_Id = 0;
+            ShowPopup = true;
+        }
+    }
+
+    void EditMedicalHistory(MedicalHistory medicalHistory)
+    {
+        objMedicalHistory = medicalHistory;
+        ShowPopup = true;
+    }
+
+    void DeleteMedicalHistory()
+    {
+        ShowPopup = false;
+        var result = Service.DeleteMedicalHistory(objMedicalHistory);
+        medicalHistories.Clear();
+        medicalHistories = Service.GetMedicalHistories(currentRole, currentUserId);
+    }
+
+    void ClosePopup()
+    {
+        ShowPopup = false;
+    }
+
+    void ValidSubmit()
+    {
+        var result = false;
+        ShowPopup = false;
+        if (objMedicalHistory.U_Id > 0)
+        {
+            result = Service.UpdateMedicalHistory(objMedicalHistory);
+        }
+        else
+        {
+            objMedicalHistory.UserId = currentUserId;
+            result = Service.CreateMedicalHistory(objMedicalHistory);
+        }
+
+        medicalHistories = Service.GetMedicalHistories(currentRole, currentUserId);
+    }
+
+}

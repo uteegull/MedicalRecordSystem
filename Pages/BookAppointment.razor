@@ -1,0 +1,88 @@
+﻿@page "/BookAppointment"
+@using MedicalRecordSystem.Data;
+@using MedicalRecordSystem.Services;
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor httpContextAccessor
+@inject NavigationManager NavigationManager
+@inherits OwningComponentBase<AppointmentService>
+
+<h3>BookAppointment</h3>
+<AuthorizeView Roles="Normal">
+    <Authorized Context="Auth">
+        <div class="p-4 border row">
+            <EditForm class="col-8" Model="@appointment" OnValidSubmit="@ValidSubmit">
+                <DataAnnotationsValidator />
+                <div class="form-group row">
+                    <div class="col-4">
+                        Enter Appointment Reason
+                    </div>
+                    <div class="col-8">
+                        <InputText @bind-Value="@appointment.Reason" class="form-control" />
+                        <ValidationMessage For="(()=> appointment.Reason)"></ValidationMessage>
+
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="col-4">
+                        Phone Number
+                    </div>
+                    <div class="col-8">
+                        <input type="text" @bind="@appointment.PhoneNumber" class="form-control" />
+                        <ValidationMessage For="(()=> appointment.PhoneNumber)"></ValidationMessage>
+                    </div>
+                </div>
+
+                <div class="form-group row">
+                    <div class="col-4">
+                        Date
+                    </div>
+                    <div class="col-8">
+                        <InputDate @bind-Value="@appointment.AppointmentDate" class="form-control" />
+                        <ValidationMessage For="(()=> appointment.AppointmentDate)"></ValidationMessage>
+                    </div>
+                </div>
+                <div class="form-group row">
+
+                    <div class="col-4">
+                        <button class="btn btn-primary form-control" type="submit">
+                            Book Now!
+                        </button>
+                    </div>
+                </div>
+            </EditForm>
+
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <p>You are not signed in</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter]
+    public int MedicalHistoryId { get; set; }
+
+    public Appointment appointment { get; set; }
+    public string UserEmail;
+    //bool ShowAppointment = false;
+    protected override void OnInitialized()
+    {
+        appointment = new Appointment()
+        {
+            AppointmentDate = DateTime.Now
+        };
+        // Get the current user
+        UserEmail = httpContextAccessor.HttpContext.User.Identity.Name;
+        appointment.UserName = UserEmail;
+
+    }
+
+    private void ValidSubmit()
+    {
+        var result = Service.CreateAppointment(appointment);
+        if (result)
+        {
+            NavigationManager.NavigateTo("/appointmentbooked");
+        }
+    }
+}
